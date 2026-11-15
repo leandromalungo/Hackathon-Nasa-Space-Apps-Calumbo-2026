@@ -1,0 +1,154 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Perfil de utilizador MBONGO com identificador de telemóvel, localização administrativa e preferência linguística.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "maxLength": 128 },
+        "fullName": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "phoneNumber": { "type": "string", "minLength": 6, "maxLength": 24 },
+        "phoneVerified": { "type": "boolean" },
+        "role": { "type": "string", "enum": ["farmer", "technician", "admin"] },
+        "province": { "type": "string", "maxLength": 64 },
+        "municipality": { "type": "string", "maxLength": 64 },
+        "locality": { "type": "string", "maxLength": 80 },
+        "preferredLanguage": { "type": "string", "enum": ["pt-AO", "en", "kg"] },
+        "kikongoVariant": { "type": "string", "enum": ["kg_san_salvador", "kg_kiwoyo", "kg_kisolongo"] },
+        "consentNotifications": { "type": "boolean" },
+        "consentDataProcessing": { "type": "boolean" },
+        "onboardingCompleted": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "fullName", "phoneNumber", "role", "preferredLanguage", "consentDataProcessing"]
+    },
+    "Farm": {
+      "title": "Farm",
+      "description": "Exploração agrícola registada por um agricultor.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "ownerId": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "province": { "type": "string", "maxLength": 64 },
+        "municipality": { "type": "string", "maxLength": 64 },
+        "locality": { "type": "string", "maxLength": 80 },
+        "lat": { "type": "number" },
+        "lng": { "type": "number" },
+        "responsibleName": { "type": "string", "maxLength": 120 },
+        "approxAreaHa": { "type": "number" },
+        "notes": { "type": "string", "maxLength": 600 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["ownerId", "name", "province", "lat", "lng"]
+    },
+    "Plot": {
+      "title": "Plot",
+      "description": "Parcela georreferenciada pertencente a uma exploração agrícola.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "farmId": { "type": "string", "maxLength": 128 },
+        "ownerId": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "code": { "type": "string", "maxLength": 32 },
+        "geometryGeoJson": { "type": "string", "maxLength": 16000 },
+        "centerLat": { "type": "number" },
+        "centerLng": { "type": "number" },
+        "areaHa": { "type": "number" },
+        "currentCrop": { "type": "string", "maxLength": 64 },
+        "variety": { "type": "string", "maxLength": 64 },
+        "plantingDate": { "type": "string", "maxLength": 32 },
+        "irrigationType": { "type": "string", "enum": ["rainfed", "drip", "furrow", "sprinkler", "manual"] },
+        "soilType": { "type": "string", "maxLength": 64 },
+        "status": { "type": "string", "enum": ["active", "fallow", "harvested", "preparation"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["farmId", "ownerId", "name", "centerLat", "centerLng", "areaHa", "currentCrop", "status"]
+    },
+    "CalendarEvent": {
+      "title": "CalendarEvent",
+      "description": "Actividade planeada ou executada no calendário agrícola.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "farmId": { "type": "string", "maxLength": 128 },
+        "plotId": { "type": "string", "maxLength": 128 },
+        "ownerId": { "type": "string", "maxLength": 128 },
+        "date": { "type": "string", "maxLength": 32 },
+        "type": { "type": "string", "enum": ["land_prep", "sowing", "irrigation", "fertilization", "treatment", "inspection", "harvest", "custom"] },
+        "description": { "type": "string", "maxLength": 400 },
+        "status": { "type": "string", "enum": ["pending", "completed", "postponed"] },
+        "notify": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["farmId", "plotId", "ownerId", "date", "type", "description", "status"]
+    },
+    "HarvestRecord": {
+      "title": "HarvestRecord",
+      "description": "Registo experimental de colheita por parcela e cultura.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "farmId": { "type": "string", "maxLength": 128 },
+        "plotId": { "type": "string", "maxLength": 128 },
+        "ownerId": { "type": "string", "maxLength": 128 },
+        "crop": { "type": "string", "maxLength": 64 },
+        "harvestDate": { "type": "string", "maxLength": 32 },
+        "quantity": { "type": "number" },
+        "unit": { "type": "string", "enum": ["kg", "t", "sacks"] },
+        "harvestedAreaHa": { "type": "number" },
+        "lossesQuantity": { "type": "number" },
+        "notes": { "type": "string", "maxLength": 500 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["farmId", "plotId", "ownerId", "crop", "harvestDate", "quantity", "unit", "harvestedAreaHa"]
+    },
+    "TranslationEntry": {
+      "title": "TranslationEntry",
+      "description": "Chave de tradução gerida com estado de revisão para Português, Inglês e Kikongo.",
+      "type": "object",
+      "properties": {
+        "key": { "type": "string", "maxLength": 128 },
+        "module": { "type": "string", "maxLength": 48 },
+        "ptAO": { "type": "string", "maxLength": 1000 },
+        "en": { "type": "string", "maxLength": 1000 },
+        "kg": { "type": "string", "maxLength": 1000 },
+        "status": { "type": "string", "enum": ["untranslated", "in_review", "validated"] },
+        "reviewerName": { "type": "string", "maxLength": 100 },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["key", "module", "ptAO", "en", "status"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Perfis privados dos utilizadores autenticados."
+    },
+    "/farms/{farmId}": {
+      "schema": { "$ref": "#/entities/Farm" },
+      "description": "Explorações agrícolas dos utilizadores."
+    },
+    "/plots/{plotId}": {
+      "schema": { "$ref": "#/entities/Plot" },
+      "description": "Parcelas associadas às explorações."
+    },
+    "/calendar_events/{eventId}": {
+      "schema": { "$ref": "#/entities/CalendarEvent" },
+      "description": "Calendário de actividades agrícolas."
+    },
+    "/harvest_records/{recordId}": {
+      "schema": { "$ref": "#/entities/HarvestRecord" },
+      "description": "Registos históricos de colheitas."
+    },
+    "/translation_entries/{keyId}": {
+      "schema": { "$ref": "#/entities/TranslationEntry" },
+      "description": "Camada dinâmica de revisão de traduções."
+    }
+  }
+}

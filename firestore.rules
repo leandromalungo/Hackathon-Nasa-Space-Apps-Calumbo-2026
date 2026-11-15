@@ -1,0 +1,224 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null && request.auth.token.email_verified == true;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
+        request.auth.token.email == 'plamaap1@gmail.com'
+      );
+    }
+
+    function isValidUserProfile(data) {
+      return data.keys().hasAll(['uid', 'fullName', 'phoneNumber', 'role', 'preferredLanguage', 'consentDataProcessing']) &&
+        data.keys().hasOnly([
+          'uid', 'fullName', 'phoneNumber', 'phoneVerified', 'role',
+          'province', 'municipality', 'locality', 'preferredLanguage',
+          'kikongoVariant', 'consentNotifications', 'consentDataProcessing',
+          'onboardingCompleted', 'createdAt', 'updatedAt'
+        ]) &&
+        data.uid is string && data.uid.size() <= 128 &&
+        data.fullName is string && data.fullName.size() >= 2 && data.fullName.size() <= 120 &&
+        data.phoneNumber is string && data.phoneNumber.size() >= 6 && data.phoneNumber.size() <= 24 &&
+        data.role in ['farmer', 'technician', 'admin'] &&
+        data.preferredLanguage in ['pt-AO', 'en', 'kg'] &&
+        data.consentDataProcessing is bool &&
+        (!('province' in data) || (data.province is string && data.province.size() <= 64)) &&
+        (!('municipality' in data) || (data.municipality is string && data.municipality.size() <= 64)) &&
+        (!('locality' in data) || (data.locality is string && data.locality.size() <= 80));
+    }
+
+    function isValidFarm(data) {
+      return data.keys().hasAll(['ownerId', 'name', 'province', 'lat', 'lng']) &&
+        data.keys().hasOnly([
+          'id', 'ownerId', 'name', 'province', 'municipality', 'locality',
+          'lat', 'lng', 'responsibleName', 'approxAreaHa', 'notes',
+          'createdAt', 'updatedAt'
+        ]) &&
+        data.ownerId is string && data.ownerId.size() <= 128 &&
+        data.name is string && data.name.size() >= 2 && data.name.size() <= 120 &&
+        data.province is string && data.province.size() <= 64 &&
+        data.lat is number && data.lng is number;
+    }
+
+    function isValidPlot(data) {
+      return data.keys().hasAll(['farmId', 'ownerId', 'name', 'centerLat', 'centerLng', 'areaHa', 'currentCrop', 'status']) &&
+        data.keys().hasOnly([
+          'id', 'farmId', 'ownerId', 'name', 'code', 'geometryGeoJson',
+          'centerLat', 'centerLng', 'areaHa', 'currentCrop', 'variety',
+          'plantingDate', 'irrigationType', 'soilType', 'status',
+          'cropHistory', 'createdAt', 'updatedAt'
+        ]) &&
+        data.farmId is string && data.farmId.size() <= 128 &&
+        data.ownerId is string && data.ownerId.size() <= 128 &&
+        data.name is string && data.name.size() >= 1 && data.name.size() <= 120 &&
+        data.centerLat is number && data.centerLng is number &&
+        data.areaHa is number &&
+        data.currentCrop is string && data.currentCrop.size() <= 64 &&
+        data.status in ['active', 'fallow', 'harvested', 'preparation'] &&
+        (!('geometryGeoJson' in data) || (data.geometryGeoJson is string && data.geometryGeoJson.size() <= 16000)) &&
+        (!('cropHistory' in data) || (data.cropHistory is list && data.cropHistory.size() <= 20));
+    }
+
+    function isValidCalendarEvent(data) {
+      return data.keys().hasAll(['farmId', 'plotId', 'ownerId', 'date', 'type', 'description', 'status']) &&
+        data.keys().hasOnly([
+          'id', 'farmId', 'plotId', 'ownerId', 'date', 'type',
+          'description', 'status', 'notify', 'createdAt', 'updatedAt'
+        ]) &&
+        data.farmId is string && data.farmId.size() <= 128 &&
+        data.plotId is string && data.plotId.size() <= 128 &&
+        data.ownerId is string && data.ownerId.size() <= 128 &&
+        data.date is string && data.date.size() <= 32 &&
+        data.type in ['land_prep', 'sowing', 'irrigation', 'fertilization', 'treatment', 'inspection', 'harvest', 'custom'] &&
+        data.description is string && data.description.size() <= 400 &&
+        data.status in ['pending', 'completed', 'postponed'];
+    }
+
+    function isValidHarvestRecord(data) {
+      return data.keys().hasAll(['farmId', 'plotId', 'ownerId', 'crop', 'harvestDate', 'quantity', 'unit', 'harvestedAreaHa']) &&
+        data.keys().hasOnly([
+          'id', 'farmId', 'plotId', 'ownerId', 'crop', 'harvestDate',
+          'quantity', 'unit', 'harvestedAreaHa', 'lossesQuantity', 'notes', 'createdAt'
+        ]) &&
+        data.farmId is string && data.farmId.size() <= 128 &&
+        data.plotId is string && data.plotId.size() <= 128 &&
+        data.ownerId is string && data.ownerId.size() <= 128 &&
+        data.crop is string && data.crop.size() <= 64 &&
+        data.harvestDate is string && data.harvestDate.size() <= 32 &&
+        data.quantity is number &&
+        data.unit in ['kg', 't', 'sacks'] &&
+        data.harvestedAreaHa is number;
+    }
+
+    function isValidTranslationEntry(data) {
+      return data.keys().hasAll(['key', 'module', 'ptAO', 'en', 'status']) &&
+        data.keys().hasOnly(['key', 'module', 'ptAO', 'en', 'kg', 'status', 'reviewerName', 'updatedAt']) &&
+        data.key is string && data.key.size() <= 128 &&
+        data.module is string && data.module.size() <= 48 &&
+        data.ptAO is string && data.ptAO.size() <= 1000 &&
+        data.en is string && data.en.size() <= 1000 &&
+        data.status in ['untranslated', 'in_review', 'validated'];
+    }
+
+    // Connection check path
+    match /test/connection {
+      allow get: if true;
+    }
+
+    match /admins/{adminUid} {
+      allow get: if isSignedIn() && (request.auth.uid == adminUid || isAdmin());
+      allow write: if isAdmin();
+    }
+
+    match /users/{userId} {
+      allow get: if isSignedIn() && isValidId(userId) && (request.auth.uid == userId || isAdmin());
+      allow list: if isAdmin();
+      allow create: if isSignedIn() && isValidId(userId) && request.auth.uid == userId &&
+        isValidUserProfile(incoming()) &&
+        incoming().uid == request.auth.uid &&
+        (incoming().role in ['farmer', 'technician'] || isAdmin());
+      allow update: if isSignedIn() && isValidId(userId) && isValidUserProfile(incoming()) && (
+        isAdmin() || (
+          request.auth.uid == userId &&
+          incoming().uid == existing().uid &&
+          incoming().role == existing().role &&
+          incoming().diff(existing()).affectedKeys().hasOnly([
+            'fullName', 'phoneNumber', 'phoneVerified', 'province', 'municipality',
+            'locality', 'preferredLanguage', 'kikongoVariant', 'consentNotifications',
+            'consentDataProcessing', 'onboardingCompleted', 'updatedAt'
+          ])
+        )
+      );
+      allow delete: if isAdmin();
+    }
+
+    match /farms/{farmId} {
+      allow get: if isSignedIn() && isValidId(farmId) && (existing().ownerId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (resource.data.ownerId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && isValidId(farmId) && isValidFarm(incoming()) && incoming().ownerId == request.auth.uid;
+      allow update: if isSignedIn() && isValidId(farmId) && isValidFarm(incoming()) && (
+        isAdmin() || (
+          existing().ownerId == request.auth.uid &&
+          incoming().ownerId == existing().ownerId &&
+          incoming().diff(existing()).affectedKeys().hasOnly([
+            'name', 'province', 'municipality', 'locality', 'lat', 'lng',
+            'responsibleName', 'approxAreaHa', 'notes', 'updatedAt'
+          ])
+        )
+      );
+      allow delete: if isSignedIn() && isValidId(farmId) && (existing().ownerId == request.auth.uid || isAdmin());
+    }
+
+    match /plots/{plotId} {
+      allow get: if isSignedIn() && isValidId(plotId) && (existing().ownerId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (resource.data.ownerId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && isValidId(plotId) && isValidPlot(incoming()) &&
+        incoming().ownerId == request.auth.uid &&
+        exists(/databases/$(database)/documents/farms/$(incoming().farmId)) &&
+        get(/databases/$(database)/documents/farms/$(incoming().farmId)).data.ownerId == request.auth.uid;
+      allow update: if isSignedIn() && isValidId(plotId) && isValidPlot(incoming()) && (
+        isAdmin() || (
+          existing().ownerId == request.auth.uid &&
+          incoming().ownerId == existing().ownerId &&
+          incoming().farmId == existing().farmId &&
+          incoming().diff(existing()).affectedKeys().hasOnly([
+            'name', 'code', 'geometryGeoJson', 'centerLat', 'centerLng', 'areaHa',
+            'currentCrop', 'variety', 'plantingDate', 'irrigationType', 'soilType',
+            'status', 'cropHistory', 'updatedAt'
+          ])
+        )
+      );
+      allow delete: if isSignedIn() && isValidId(plotId) && (existing().ownerId == request.auth.uid || isAdmin());
+    }
+
+    match /calendar_events/{eventId} {
+      allow get: if isSignedIn() && isValidId(eventId) && (existing().ownerId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (resource.data.ownerId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && isValidId(eventId) && isValidCalendarEvent(incoming()) && incoming().ownerId == request.auth.uid;
+      allow update: if isSignedIn() && isValidId(eventId) && isValidCalendarEvent(incoming()) && (
+        isAdmin() || (
+          existing().ownerId == request.auth.uid &&
+          incoming().ownerId == existing().ownerId &&
+          incoming().diff(existing()).affectedKeys().hasOnly([
+            'date', 'type', 'description', 'status', 'notify', 'updatedAt'
+          ])
+        )
+      );
+      allow delete: if isSignedIn() && isValidId(eventId) && (existing().ownerId == request.auth.uid || isAdmin());
+    }
+
+    match /harvest_records/{recordId} {
+      allow get: if isSignedIn() && isValidId(recordId) && (existing().ownerId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (resource.data.ownerId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && isValidId(recordId) && isValidHarvestRecord(incoming()) && incoming().ownerId == request.auth.uid;
+      allow update: if isAdmin() && isValidId(recordId) && isValidHarvestRecord(incoming());
+      allow delete: if isSignedIn() && isValidId(recordId) && (existing().ownerId == request.auth.uid || isAdmin());
+    }
+
+    match /translation_entries/{keyId} {
+      allow get, list: if true;
+      allow create, update, delete: if isAdmin() && isValidId(keyId) && isValidTranslationEntry(incoming());
+    }
+  }
+}

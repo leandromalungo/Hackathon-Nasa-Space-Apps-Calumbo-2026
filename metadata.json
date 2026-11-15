@@ -1,0 +1,6 @@
+{
+  "name": "MBONGO",
+  "description": "Plataforma de agricultura de precisão para Angola com dados meteorológicos, satelitais, recomendações agroclimáticas, PWA offline e acesso USSD.",
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
